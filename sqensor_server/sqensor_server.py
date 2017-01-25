@@ -10,7 +10,7 @@ import falcon
 import requests
 import sys
 import rrdtool
-
+from os import walk
 import logging
 
 if not sys.platform == "win32":
@@ -33,6 +33,7 @@ else:
 logger.setLevel(logging.INFO)
 
 configfile = "/etc/sqensor/config.json"
+indextemplate = "/etc/sqensor/index.template"
 
 storageroot=None
 sensorregister=None
@@ -50,6 +51,7 @@ if os.path.isfile(configfile):
 		rrddir=config["rrdDir"]
 		wwwrootdir=config["wwwrootDir"]
 		validtokens=config["authorizedTokens"]
+
 		
 if not config:
 	sys.exit(1)
@@ -94,7 +96,7 @@ class StorageEngine(object):
                         'Register Error',
                         'Unknown type of sensor, valid types: DHT11, DHT22')
 
-    def graphRrd(self,pngfilename,rrdfilename,sensortype,sensordata):
+    def graphRrd(self,pngfilename,rrdfilename,sensortype,sensordata,sensorname):
 
         if sensortype == "DHT11" or sensortype == "DHT22":
 		rrdtool.graph(str(pngfilename),
@@ -104,7 +106,7 @@ class StorageEngine(object):
                                                    '--start', "now-1h",
                                                    '--end', "-1",
                                                    '--vertical-label', 'value',
-                                                   '--title', str(sensortype)+' Sensor',
+                                                   '--title', str(sensorname) + ' - Sensor ('+str(sensortype)+')',
                                                    '--lower-limit', '-30',
                                                    '--upper-limit', '50',
                                                    'DEF:temperature='+str(rrdfilename)+':temperature:MAX',
@@ -117,6 +119,24 @@ class StorageEngine(object):
                                                    'GPRINT:temperature:AVERAGE:Average\:%8.5lf',
                                                    'GPRINT:temperature:MAX:Maximum\:%8.5lf'
 						)
+
+		f = open(indextemplate, 'r')
+		templatehtml = f.readlines()
+		f.close()
+
+		graphhtml = ""
+
+		for (dirpath, dirnames, filenames) in walk(sensorregister):
+	
+			for sensorname in filenames:
+				graphhtml += "<img src=\"%s.png\" alt=\"Here should be the Graph for - %s\" class=\"floating_element\"/><br><br>" % (sensorname, sensorname)
+
+		
+		templatehtml = "".join(templatehtml).replace("%GRAPH%",graphhtml)
+
+		f = open(wwwrootdir+os.sep+"index.html", 'w')
+		f.write(templatehtml)
+		f.close()
 
     def updateRrd(self,filename,sensortype,sensordata):
 
@@ -192,7 +212,7 @@ class StorageEngine(object):
 		_pngfile = wwwrootdir+os.sep+sensorname+".png"
 
 		self.updateRrd(_rrdfile,sensortype,sensordata)
-		self.graphRrd(_pngfile,_rrdfile,sensortype,sensordata)
+		self.graphRrd(_pngfile,_rrdfile,sensortype,sensordata,sensorname)
 
         return sensordata
 
