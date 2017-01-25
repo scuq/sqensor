@@ -1,5 +1,7 @@
 # sqsensor
 
+sqsensor server is a simple python script based on falcon (a minimalistic Python WSGI framework), which receives data via http(s) from simple rest clients like curl or the sqensor_client script, a client needs to specify an authorization token, if the token is allowed by the the server (config.json), the wsgi script will populate an rrd file, the rrd file is graphed to a corresponding png.
+
 ## Server
 
 Apache Config Example
