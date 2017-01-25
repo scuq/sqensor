@@ -24,7 +24,7 @@ Apache Config Example
 
 ## Client
 
-````$ sqensor_client.py -n "Living Room" --register ```
+````$ sqensor_client.py -a xYzxyz -n "Living Room" -u http://your.server/sqensor/server/ --register ```
 
 ````$ sqensor_client.py -a xYzxyz -n "Living Room" -u http://your.server/sqensor/server/```
 
