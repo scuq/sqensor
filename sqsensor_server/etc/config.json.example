@@ -1,0 +1,9 @@
+{
+  "authorizedTokens": [
+    "xYzxyz"
+  ],
+  "storageRootDir": "/var/lib/sqensor",
+  "sensorRegisterDir": "/var/lib/sqensor/sensors",
+  "rrdDir": "/var/lib/sqensor/rrds",
+  "wwwrootDir": "/var/www/html/sqensor/"
+}
