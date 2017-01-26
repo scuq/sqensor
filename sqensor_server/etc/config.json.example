@@ -2,6 +2,8 @@
   "authorizedTokens": [
     "xYzxyz"
   ],
+  "wwwuser": "www-data",
+  "wwwgroup": "www-data",
   "storageRootDir": "/var/lib/sqensor",
   "sensorRegisterDir": "/var/lib/sqensor/sensors",
   "rrdDir": "/var/lib/sqensor/rrds",

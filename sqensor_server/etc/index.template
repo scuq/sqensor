@@ -7,6 +7,7 @@
   -->
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="refresh" content="11" >
     <title>Sqensor</title>
     <style type="text/css" media="screen">
   * {
@@ -151,6 +152,7 @@
   .floating_element {
     position: relative;
     float: left;
+    margin: 10px;
   }
 
   div.table_of_contents_item a,
@@ -192,6 +194,7 @@
 <body>
 	<div class="main_page">
 		<div class="page_header floating_element">
+			<a href="https://github.com/scuq/sqensor/"><img src="sqensor_128.png" alt="" width="128" height="128" class="floating_element"/></a>
 			<span class="floating_element">
 				Sqensor 
 			</span>

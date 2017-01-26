@@ -4,6 +4,7 @@ me = "sqensor_server"
 import json
 import logging
 import uuid
+from optparse import OptionParser
 from wsgiref import simple_server
 import os
 import falcon
@@ -31,41 +32,6 @@ else:
         logger.addHandler(syslog)
 
 logger.setLevel(logging.INFO)
-
-configfile = "/etc/sqensor/config.json"
-indextemplate = "/etc/sqensor/index.template"
-
-storageroot=None
-sensorregister=None
-validtokens=[]
-rrddir=None
-wwwrootdir=None
-config = None
-
-
-if os.path.isfile(configfile):
-	with open(configfile) as data_file:    
-		config = json.load(data_file)
-		storageroot=config["storageRootDir"]		
-		sensorregister=config["sensorRegisterDir"]
-		rrddir=config["rrdDir"]
-		wwwrootdir=config["wwwrootDir"]
-		validtokens=config["authorizedTokens"]
-
-		
-if not config:
-	sys.exit(1)
-
-if not os.path.isdir(sensorregister):
-	os.makedirs(sensorregister)	
-
-if not os.path.isdir(rrddir):
-	os.makedirs(rrddir)	
-
-if not os.path.isdir(wwwrootdir):
-	os.makedirs(wwwrootdir)	
-
-
 
 
 class StorageEngine(object):
@@ -96,29 +62,7 @@ class StorageEngine(object):
                         'Register Error',
                         'Unknown type of sensor, valid types: DHT11, DHT22')
 
-    def graphRrd(self,pngfilename,rrdfilename,sensortype,sensordata,sensorname):
-
-        if sensortype == "DHT11" or sensortype == "DHT22":
-		rrdtool.graph(str(pngfilename),
-                                                   '--imgformat', 'PNG',
-                                                   '--width', '1121',
-                                                   '--height', '313',
-                                                   '--start', "now-1h",
-                                                   '--end', "-1",
-                                                   '--vertical-label', 'value',
-                                                   '--title', str(sensorname) + ' - Sensor ('+str(sensortype)+')',
-                                                   '--lower-limit', '-30',
-                                                   '--upper-limit', '50',
-                                                   'DEF:temperature='+str(rrdfilename)+':temperature:MAX',
-                                                   'DEF:humidity='+str(rrdfilename)+':humidity:MAX',
-                                                   'LINE:temperature#9E3C97:temperature',
-                                                   'LINE:humidity#1D329B:humidity',
-                                                   'HRULE:0#FF6A00',
-                                                   'HRULE:23#FF0000',
-                                                   'GPRINT:temperature:LAST:Current\:%8.5lf',
-                                                   'GPRINT:temperature:AVERAGE:Average\:%8.5lf',
-                                                   'GPRINT:temperature:MAX:Maximum\:%8.5lf'
-						)
+    def generateIndex(self,sensorname):
 
 		f = open(indextemplate, 'r')
 		templatehtml = f.readlines()
@@ -129,7 +73,10 @@ class StorageEngine(object):
 		for (dirpath, dirnames, filenames) in walk(sensorregister):
 	
 			for sensorname in filenames:
-				graphhtml += "<img src=\"%s.png\" alt=\"Here should be the Graph for - %s\" class=\"floating_element\"/><br><br>" % (sensorname, sensorname)
+
+				graphhtml += "<div  align=\"center\"><b>"+sensorname+"</b></div>"
+				graphhtml += "<img src=\"%s_1h.png\" alt=\"Here should be the Graph for - %s\" class=\"floating_element\"/>" % (sensorname, sensorname)
+				graphhtml += "<img src=\"%s_24h.png\" alt=\"Here should be the Graph for - %s\" class=\"floating_element\"/>" % (sensorname, sensorname)
 
 		
 		templatehtml = "".join(templatehtml).replace("%GRAPH%",graphhtml)
@@ -137,6 +84,63 @@ class StorageEngine(object):
 		f = open(wwwrootdir+os.sep+"index.html", 'w')
 		f.write(templatehtml)
 		f.close()
+
+
+    def graphRrd(self,rrdfilename,sensortype,sensordata,sensorname):
+
+	pngfilename_24h = wwwrootdir+os.sep+sensorname+"_24h.png"
+	pngfilename_1h = wwwrootdir+os.sep+sensorname+"_1h.png"
+
+        if sensortype == "DHT11" or sensortype == "DHT22":
+		rrdtool.graph(str(pngfilename_24h),
+                                                   '--imgformat', 'PNG',
+                                                   '--color', 'CANVAS#000000',
+                                                   '--color', 'BACK#000000',
+                                                   '--color', 'FONT#FFFFFF',
+                                                   '--width', '1121',
+                                                   '--height', '313',
+                                                   '--start', "now-23h",
+                                                   '--end', "-1",
+                                                   '--vertical-label', 'value',
+                                                   '--title', 'Last 24h: '+ str(sensorname) + ' - Sensor ('+str(sensortype)+')',
+                                                   '--lower-limit', '-30',
+                                                   '--upper-limit', '50',
+                                                   'DEF:temperature='+str(rrdfilename)+':temperature:MAX',
+                                                   'DEF:humidity='+str(rrdfilename)+':humidity:MAX',
+                                                   'AREA:humidity#1D329B:humidity',
+                                                   'LINE3:temperature#FF3700:temperature',
+                                                   'HRULE:0#A1F229',
+                                                   'GPRINT:temperature:LAST:Current\:%8.5lf',
+                                                   'GPRINT:temperature:AVERAGE:Average\:%8.5lf',
+                                                   'GPRINT:temperature:MAX:Maximum\:%8.5lf'
+						)
+
+                rrdtool.graph(str(pngfilename_1h),
+                                                   '--imgformat', 'PNG',
+                                                   '--color', 'CANVAS#000000',
+                                                   '--color', 'BACK#000000',
+                                                   '--color', 'FONT#FFFFFF',
+                                                   '--width', '1121',
+                                                   '--height', '313',
+                                                   '--start', "now-1h",
+                                                   '--end', "-1",
+                                                   '--vertical-label', 'value',
+                                                   '--title', 'Last 1h: ' + str(sensorname) + ' - Sensor ('+str(sensortype)+')',
+                                                   '--lower-limit', '-30',
+                                                   '--upper-limit', '50',
+                                                   'DEF:temperature='+str(rrdfilename)+':temperature:MAX',
+                                                   'DEF:humidity='+str(rrdfilename)+':humidity:MAX',
+                                                   'AREA:humidity#1D329B:humidity',
+                                                   'LINE3:temperature#FF3700:temperature',
+                                                   'HRULE:0#A1F229',
+                                                   'GPRINT:temperature:LAST:Current\:%8.5lf',
+                                                   'GPRINT:temperature:AVERAGE:Average\:%8.5lf',
+                                                   'GPRINT:temperature:MAX:Maximum\:%8.5lf'
+                                                )
+
+		self.generateIndex(sensorname)
+
+		
 
     def updateRrd(self,filename,sensortype,sensordata):
 
@@ -209,10 +213,9 @@ class StorageEngine(object):
 	else:
 
 		_rrdfile = rrddir+os.sep+sensorname+".rrd"
-		_pngfile = wwwrootdir+os.sep+sensorname+".png"
 
 		self.updateRrd(_rrdfile,sensortype,sensordata)
-		self.graphRrd(_pngfile,_rrdfile,sensortype,sensordata,sensorname)
+		self.graphRrd(_rrdfile,sensortype,sensordata,sensorname)
 
         return sensordata
 
@@ -368,6 +371,103 @@ class DataResource(object):
         resp.location = '/data/%s' % (proper_data)
 
 
+## main
+
+configfile = "/etc/sqensor/config.json"
+indextemplate = "/etc/sqensor/index.template"
+
+storageroot=None
+sensorregister=None
+validtokens=[]
+rrddir=None
+wwwrootdir=None
+config = None
+wwwuser = None
+wwwgroup = None
+
+if os.path.isfile(configfile):
+        with open(configfile) as data_file:
+                config = json.load(data_file)
+                storageroot=config["storageRootDir"]
+                sensorregister=config["sensorRegisterDir"]
+                rrddir=config["rrdDir"]
+                wwwrootdir=config["wwwrootDir"]
+                validtokens=config["authorizedTokens"]
+                wwwuser=config["wwwuser"]
+                wwwgroup=config["wwwgroup"]
+
+if not config:
+	print "no config loaded."
+        sys.exit(1)
+
+
+def recurseChown(path,uid,gid):
+
+	for root, dirs, files in os.walk(path):  
+	  for momo in dirs:  
+	    os.chown(os.path.join(root, momo), uid, gid)
+	  for momo in files:
+	    os.chown(os.path.join(root, momo), uid, gid)
+
+def main(): 
+
+	parser = OptionParser()
+	parser.add_option("", "--setup", action="store_true", dest="setup", default=False, help="setup dirs and permissions")
+	(options, args) = parser.parse_args()
+
+	if options.setup:
+
+		import pwd
+
+		wwwuid = pwd.getpwnam(wwwuser)[2]
+		wwwgid = pwd.getpwnam(wwwgroup)[2]
+
+		print "starting setup"
+
+		if not os.path.isdir(sensorregister):
+			print "creating sensorregister direcotry "+sensorregister
+       			os.makedirs(sensorregister)
+
+		print "chown of sensorregister direcotry "+sensorregister+" to "+wwwuser+":"+wwwgroup
+		recurseChown(sensorregister,wwwuid,wwwgid)
+
+		if not os.path.isdir(rrddir):
+			print "creating rrd direcotry "+rrddir
+       		 	os.makedirs(rrddir)
+
+		print "chown of rrd direcotry "+sensorregister+" to "+wwwuser+":"+wwwgroup
+		recurseChown(rrddir,wwwuid,wwwgid)
+
+		if not os.path.isdir(wwwrootdir):
+			print "creating wwwroot direcotry "+wwwrootdir
+       		 	os.makedirs(wwwrootdir)
+
+		print "chown of wwwroot direcotry "+sensorregister+" to "+wwwuser+":"+wwwgroup
+		recurseChown(wwwrootdir,wwwuid,wwwgid)
+
+		print """example apache2 config:
+		<VirtualHost *:80>
+
+		        ServerAdmin webmaster@localhost
+		        DocumentRoot /var/www/html
+
+		        WSGIDaemonProcess """+wwwuser+""" python-path=/var/www/sqensor;/var/lib/sqensor/rrds/
+		        WSGIProcessGroup """+wwwgroup+"""
+		        WSGIScriptAlias /sqensor/server /var/www/sqensor_server/sqensor_server.py
+		        WSGIPassAuthorization On
+
+		        ErrorLog ${APACHE_LOG_DIR}/error.log
+		        CustomLog ${APACHE_LOG_DIR}/access.log combined
+		</VirtualHost>
+		"""
+
+		
+
+		sys.exit(0)
+
+
+	sys.exit(1)
+
 # Configure your WSGI server to load "things.app" (app is a WSGI callable)
 application = falcon.API(middleware=[
     AuthMiddleware(),
@@ -380,17 +480,12 @@ data = DataResource(db)
 register = SensorRegister(db)
 application.add_route('/data', data)
 application.add_route('/register', register)
-
+	
 # If a responder ever raised an instance of StorageError, pass control to
 # the given handler.
 application.add_error_handler(StorageError, StorageError.handle)
 
-	
 
-def main(): 
 
-    logger.info("starting httpd")
-    #httpd = simple_server.make_server('0.0.0.0', 8000, app)
-    #httpd.serve_forever()
 
 if __name__=='__main__': main()
