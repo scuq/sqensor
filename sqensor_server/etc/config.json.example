@@ -7,5 +7,6 @@
   "storageRootDir": "/var/lib/sqensor",
   "sensorRegisterDir": "/var/lib/sqensor/sensors",
   "rrdDir": "/var/lib/sqensor/rrds",
-  "wwwrootDir": "/var/www/html/sqensor/"
+  "wwwrootDir": "/var/www/html/sqensor/",
+  "widget1": "/etc/sqensor/widget1.png"
 }

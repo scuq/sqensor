@@ -13,6 +13,12 @@ import sys
 import rrdtool
 from os import walk
 import logging
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
+from PIL import ImageEnhance
+import datetime
+
 
 if not sys.platform == "win32":
         from logging.handlers import SysLogHandler
@@ -68,22 +74,71 @@ class StorageEngine(object):
 		templatehtml = f.readlines()
 		f.close()
 
+		widgethtml = ""
 		graphhtml = ""
+
+		widgethtml += "<table>"
+                for (dirpath, dirnames, filenames) in walk(sensorregister):
+
+                        for sensorname in filenames:
+
+				widgethtml += "<tr>"
+                                widgethtml += "<td width=\"200px\"><b>"+sensorname+"</b></td><td><img src=\"%s_last.png\" alt=\"Here should be the Graph for - %s\"/></td>"  % (sensorname, sensorname)
+				widgethtml += "</tr>"
+		widgethtml += "</table>"
 
 		for (dirpath, dirnames, filenames) in walk(sensorregister):
 	
 			for sensorname in filenames:
 
-				graphhtml += "<div  align=\"center\"><b>"+sensorname+"</b></div>"
+				graphhtml += "<div  align=\"center\"><b>"+sensorname+"</b></div>"  
 				graphhtml += "<img src=\"%s_1h.png\" alt=\"Here should be the Graph for - %s\" class=\"floating_element\"/>" % (sensorname, sensorname)
 				graphhtml += "<img src=\"%s_24h.png\" alt=\"Here should be the Graph for - %s\" class=\"floating_element\"/>" % (sensorname, sensorname)
 
 		
+		templatehtml = "".join(templatehtml).replace("%WIDGETS%",widgethtml)
 		templatehtml = "".join(templatehtml).replace("%GRAPH%",graphhtml)
 
 		f = open(wwwrootdir+os.sep+"index.html", 'w')
 		f.write(templatehtml)
 		f.close()
+
+
+    def graphLast(self,rrdfilename,sensortype,sensordata,sensorname):
+	
+	lastpngfilename = wwwrootdir+os.sep+sensorname+"_last.png"	
+
+	if sensortype == "DHT11" or sensortype == "DHT22":
+
+		print rrdtool.fetch(str(rrdfilename),"LAST","now-1m","now-30s")[2][0][0]
+
+		
+		font_datetime = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",18)
+		font_temperature = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",23)
+
+		
+		img = Image.open(widget1template)
+		draw = ImageDraw.Draw(img)
+
+		text_datetime = unicode(datetime.datetime.now().strftime('%H:%M'))
+		text_temperature = unicode(round(float(rrdtool.fetch(str(rrdfilename),"LAST","now-1m","now-30s")[2][0][0]),1))+u"°C"	
+
+		text_datetime_x, text_datetime_y = font_datetime.getsize(text_datetime)
+		text_temperature_x, text_temperature_y = font_temperature.getsize(text_temperature)
+
+		text_datetime_y = text_datetime_y + 50
+
+		x_datetime = (img.width - text_datetime_x)/2
+		y_datetime = (img.height - text_datetime_y)/2
+
+		x_temperature = (img.width - text_temperature_x)/2
+		y_temperature = (img.height - text_temperature_y)/2
+
+		draw.text ((x_datetime,y_datetime), text_datetime, font=font_datetime)
+		draw.text ((x_temperature,y_temperature), text_temperature, font=font_temperature)
+		img.save(lastpngfilename,'png')
+
+
 
 
     def graphRrd(self,rrdfilename,sensortype,sensordata,sensorname):
@@ -184,8 +239,6 @@ class StorageEngine(object):
 	return sensor["name"]
 
 
-    def get_last(self, id):
-	retrun [{'id': str(uuid.uuid4()), 'data': 9}]	
 
     def get_measureddata(self, marker, limit):
 	return
@@ -216,6 +269,7 @@ class StorageEngine(object):
 
 		self.updateRrd(_rrdfile,sensortype,sensordata)
 		self.graphRrd(_rrdfile,sensortype,sensordata,sensorname)
+		self.graphLast(_rrdfile,sensortype,sensordata,sensorname)
 
         return sensordata
 
@@ -375,6 +429,7 @@ class DataResource(object):
 
 configfile = "/etc/sqensor/config.json"
 indextemplate = "/etc/sqensor/index.template"
+widget1template = "/etc/sqensor/widget1.png"
 
 storageroot=None
 sensorregister=None
