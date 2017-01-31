@@ -29,13 +29,12 @@ formatter = logging.Formatter('%(asctime)s %(levelname)s '+me+' %(message)s')
 
 if sys.platform == 'win32':
         hdlr = logging.FileHandler(os.path.normpath(os.environ["USERPROFILE"]+os.sep+__name__+".log"))
-        hdlr.setFormatter(formatter)
-        logger.addHandler(hdlr)
-
 else:
-        syslog = SysLogHandler(address='/dev/log',facility="local5")
-        syslog.setFormatter(formatter)
-        logger.addHandler(syslog)
+	hdlr = logging.FileHandler(os.path.normpath("/var/log/sqensor/"+os.sep+__name__+".log"))
+
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr)
+
 
 logger.setLevel(logging.INFO)
 
@@ -302,7 +301,6 @@ class AuthMiddleware(object):
 
             raise falcon.HTTPUnauthorized('Auth token required',
                                           description,
-                                          challenges,
                                           href='https://www.github.com/scuq/sqensor')
 
         if not self._token_is_valid(token, account_id):
@@ -311,7 +309,6 @@ class AuthMiddleware(object):
 
             raise falcon.HTTPUnauthorized('Authentication required',
                                           description,
-                                          challenges,
                                           href='https://www.github.com/scuq/sqensor')
 
     def _token_is_valid(self, token, account_id):
