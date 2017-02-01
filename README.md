@@ -48,6 +48,30 @@ container# tail -f /var/log/apache/error.log
 ```
 this will bind the hosts /etc/sqensor directory to the /etc/sqensor directory of the container.
 
+Start with systemd:
+
+
+```
+# vi /lib/systemd/system/docker-sqensor-server.service
+
+[Unit]
+Description=Docker Sqensor-Server container
+Requires=docker.service
+After=docker.service
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker run -v /etc/sqensor:/etc/sqensor -p 8080:80 sqensor-server
+ExecStop=/usr/bin/docker stop -t 2 sqensor-server
+
+[Install]
+WantedBy=default.target
+
+# systemctl daemon-reload
+# systemctl start docker-sqensor-server.service
+
+
+```
 ## Client
 
 ````$ sqensor_client.py -a xYzxyz -n "Living Room" -u http://your.server/sqensor/server/ --register ```
