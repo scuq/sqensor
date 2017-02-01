@@ -22,6 +22,32 @@ Apache Config Example
 </VirtualHost>
 ```
 
+### Docker
+Within the Git-Root Dir:
+
+```
+# docker build -t sqensor-server .
+...
+...
+...
+...
+
+# docker image ls
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+sqensor-server      latest              5fa7d5e117b9        5 seconds ago       355 MB
+
+
+```
+
+Create your /etc/sqensor config file on the docker-host and pass the volume to the container, to start or test interactively run
+
+```
+host# docker run -v /etc/sqensor:/etc/sqensor -p 8080:80 --interactive --tty --entrypoint=/bin/bash sqensor-server --login
+container# apachectl start
+container# tail -f /var/log/apache/error.log
+```
+this will bind the hosts /etc/sqensor directory to the /etc/sqensor directory of the container.
+
 ## Client
 
 ````$ sqensor_client.py -a xYzxyz -n "Living Room" -u http://your.server/sqensor/server/ --register ```
@@ -49,3 +75,5 @@ Options:
                         sqensor base url default http://127.0.0.1:8000
 
 ```
+
+
