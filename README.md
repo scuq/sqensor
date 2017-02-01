@@ -69,7 +69,7 @@ WantedBy=default.target
 
 # systemctl daemon-reload
 # systemctl start docker-sqensor-server.service
-
+# systemctl enable docker-sqensor-server.service
 
 ```
 ## Client
